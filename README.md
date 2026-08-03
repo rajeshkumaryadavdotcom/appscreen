@@ -2,14 +2,13 @@
 
 A free, open-source tool for creating beautiful App Store screenshots with customizable backgrounds, text overlays, and 3D device mockups.
 
-
-**[Start using it now. Hosted on GitHub Pages](https://yuzu-hub.github.io/appscreen/)**
+**🚀 [Live Demo → appscreen.rky.app](https://appscreen.rky.app)**
 
 ![App Store Screenshot Generator](img/screenshot-generator.png)
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> 🍋 **Built by [YuzuHub](https://yuzuhub.com)** — We build smart AI products in Düsseldorf, Germany. Check out [yuzu.chat](https://yuzu.chat), [Eno](https://eno.yuzuhub.com), [VoltPlan](https://voltplan.app) and more.
+> **Forked & maintained by [RK Yadav](https://rky.app)** — Original project by [YuzuHub](https://yuzuhub.com).
 
 ## Features
 
@@ -64,7 +63,7 @@ A free, open-source tool for creating beautiful App Store screenshots with custo
 
 ### Just Want to Use It?
 
-Visit **[yuzu-hub.github.io/appscreen](https://yuzu-hub.github.io/appscreen/)** to use the tool directly in your browser. No installation needed!
+Visit **[appscreen.rky.app](https://appscreen.rky.app)** to use the tool directly in your browser. No installation needed!
 
 ---
 
@@ -204,4 +203,6 @@ MIT License - feel free to use, modify, and distribute.
 
 ## Author
 
-Proudly vibe coded by [Stefan](https://github.com/BlackMac) at [YuzuHub](https://yuzuhub.com/en) — building smart AI products from Düsseldorf, Germany.
+Forked and maintained by **[RK Yadav](https://rky.app)**.
+
+Original project by [Stefan](https://github.com/BlackMac) at [YuzuHub](https://yuzuhub.com/en).
