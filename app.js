@@ -15,8 +15,8 @@ const state = {
             gradient: {
                 angle: 135,
                 stops: [
-                    { color: '#667eea', position: 0 },
-                    { color: '#764ba2', position: 100 }
+                    { color: '#4f46e5', position: 0 },
+                    { color: '#7c3aed', position: 100 }
                 ]
             },
             solid: '#1a1a2e',
@@ -1746,12 +1746,19 @@ function loadState() {
                                     if (needs3DMigration) {
                                         migrate3DPosition(screenshotSettings);
                                     }
+                                    const loadedBg = s.background || JSON.parse(JSON.stringify(migratedBackground));
+                                    if (loadedBg?.gradient?.stops?.length === 2 &&
+                                        loadedBg.gradient.stops[0].color === '#667eea' &&
+                                        loadedBg.gradient.stops[1].color === '#764ba2') {
+                                        loadedBg.gradient.stops[0].color = '#4f46e5';
+                                        loadedBg.gradient.stops[1].color = '#7c3aed';
+                                    }
                                     state.screenshots[index] = {
                                         image: img,
                                         name: s.name,
                                         deviceType: s.deviceType,
                                         localizedImages: localizedImages,
-                                        background: s.background || JSON.parse(JSON.stringify(migratedBackground)),
+                                        background: loadedBg,
                                         screenshot: screenshotSettings,
                                         text: s.text || JSON.parse(JSON.stringify(migratedText)),
                                         elements: reconstructElementImages(s.elements),
@@ -1803,6 +1810,12 @@ function loadState() {
                         state.defaults.background = migratedBackground;
                         state.defaults.screenshot = migratedScreenshot;
                         state.defaults.text = migratedText;
+                    }
+                    if (state.defaults?.background?.gradient?.stops?.length === 2 &&
+                        state.defaults.background.gradient.stops[0].color === '#667eea' &&
+                        state.defaults.background.gradient.stops[1].color === '#764ba2') {
+                        state.defaults.background.gradient.stops[0].color = '#4f46e5';
+                        state.defaults.background.gradient.stops[1].color = '#7c3aed';
                     }
                 } else {
                     // New project, reset to defaults
@@ -1859,8 +1872,8 @@ function resetStateToDefaults() {
             gradient: {
                 angle: 135,
                 stops: [
-                    { color: '#667eea', position: 0 },
-                    { color: '#764ba2', position: 100 }
+                    { color: '#4f46e5', position: 0 },
+                    { color: '#7c3aed', position: 100 }
                 ]
             },
             solid: '#1a1a2e',
