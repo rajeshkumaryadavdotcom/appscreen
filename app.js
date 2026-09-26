@@ -3,7 +3,7 @@ const state = {
     screenshots: [],
     selectedIndex: 0,
     transferTarget: null, // Index of screenshot waiting to receive style transfer
-    outputDevice: 'iphone-6.9',
+    outputDevice: 'iphone-6.5',
     currentLanguage: 'en', // Global current language for all text
     projectLanguages: ['en'], // Languages available in this project
     customWidth: 1290,
@@ -1246,6 +1246,10 @@ const deviceDimensions = {
     'android-phone-hd': { width: 1440, height: 2560 },
     'android-tablet-7': { width: 1200, height: 1920 },
     'android-tablet-10': { width: 1600, height: 2560 },
+    'instagram-post': { width: 1080, height: 1350 },
+    'instagram-square': { width: 1080, height: 1080 },
+    'instagram-story': { width: 1080, height: 1920 },
+    'linkedin-post': { width: 1200, height: 627 },
     'web-og': { width: 1200, height: 630 },
     'web-twitter': { width: 1200, height: 675 },
     'web-hero': { width: 1920, height: 1080 },
@@ -1782,9 +1786,9 @@ function loadState() {
                     }
 
                     state.selectedIndex = parsed.selectedIndex || 0;
-                    state.outputDevice = parsed.outputDevice || 'iphone-6.9';
-                    state.customWidth = parsed.customWidth || 1320;
-                    state.customHeight = parsed.customHeight || 2868;
+                    state.outputDevice = parsed.outputDevice || 'iphone-6.5';
+                    state.customWidth = parsed.customWidth || 1284;
+                    state.customHeight = parsed.customHeight || 2778;
 
                     // Load global language settings
                     state.currentLanguage = parsed.currentLanguage || 'en';
@@ -1844,9 +1848,9 @@ function convertProject() {
 function resetStateToDefaults() {
     state.screenshots = [];
     state.selectedIndex = 0;
-    state.outputDevice = 'iphone-6.9';
-    state.customWidth = 1320;
-    state.customHeight = 2868;
+    state.outputDevice = 'iphone-6.5';
+    state.customWidth = 1284;
+    state.customHeight = 2778;
     state.currentLanguage = 'en';
     state.projectLanguages = ['en'];
     state.defaults = {
