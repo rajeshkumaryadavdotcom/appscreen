@@ -2313,6 +2313,20 @@ function syncUIWithState() {
     document.getElementById('rotation-3d-z').value = rotation3D.z;
     document.getElementById('rotation-3d-z-value').textContent = formatValue(rotation3D.z) + '°';
 
+    // 3D Angle Presets sync
+    const anglePresets3D = {
+        'front': { x: 0, y: 0, z: 0 },
+        'showcase-left': { x: 18, y: -22, z: 8 },
+        'showcase-right': { x: 18, y: 22, z: -8 },
+        'floating': { x: 28, y: -16, z: 12 }
+    };
+    document.querySelectorAll('#presets-3d-angles .position-preset').forEach(btn => {
+        const key = btn.dataset.angle3d;
+        const p = anglePresets3D[key];
+        const isMatch = p && Math.abs(rotation3D.x - p.x) < 2 && Math.abs(rotation3D.y - p.y) < 2 && Math.abs(rotation3D.z - p.z) < 2;
+        btn.classList.toggle('active', isMatch);
+    });
+
     // Hide 2D-only settings in 3D mode, show 3D tip
     document.getElementById('2d-only-settings').style.display = use3D ? 'none' : 'block';
     document.getElementById('position-presets-section').style.display = use3D ? 'none' : 'block';
@@ -4722,6 +4736,54 @@ function setupEventListeners() {
             setThreeJSRotation(ss.rotation3D.x, ss.rotation3D.y, ss.rotation3D.z);
         }
         updateCanvas(); // Keep export canvas in sync
+    });
+
+    // 3D Angle Presets
+    const anglePresets3D = {
+        'front': { x: 0, y: 0, z: 0, scale: 70, yPos: 55 },
+        'showcase-left': { x: 18, y: -22, z: 8, scale: 66, yPos: 58 },
+        'showcase-right': { x: 18, y: 22, z: -8, scale: 66, yPos: 58 },
+        'floating': { x: 28, y: -16, z: 12, scale: 62, yPos: 62 }
+    };
+
+    document.querySelectorAll('#presets-3d-angles .position-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const key = btn.dataset.angle3d;
+            const p = anglePresets3D[key];
+            if (!p) return;
+
+            document.querySelectorAll('#presets-3d-angles .position-preset').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const ss = getScreenshotSettings();
+            if (!ss.rotation3D) ss.rotation3D = { x: 0, y: 0, z: 0 };
+            ss.rotation3D.x = p.x;
+            ss.rotation3D.y = p.y;
+            ss.rotation3D.z = p.z;
+            setScreenshotSetting('scale', p.scale);
+            setScreenshotSetting('y', p.yPos);
+
+            // Update UI sliders
+            document.getElementById('rotation-3d-x').value = p.x;
+            document.getElementById('rotation-3d-x-value').textContent = formatValue(p.x) + '°';
+            document.getElementById('rotation-3d-y').value = p.y;
+            document.getElementById('rotation-3d-y-value').textContent = formatValue(p.y) + '°';
+            document.getElementById('rotation-3d-z').value = p.z;
+            document.getElementById('rotation-3d-z-value').textContent = formatValue(p.z) + '°';
+
+            document.getElementById('screenshot-scale').value = p.scale;
+            document.getElementById('screenshot-scale-value').textContent = formatValue(p.scale) + '%';
+            document.getElementById('screenshot-y').value = p.yPos;
+            document.getElementById('screenshot-y-value').textContent = formatValue(p.yPos) + '%';
+
+            if (typeof setThreeJSRotation === 'function') {
+                setThreeJSRotation(p.x, p.y, p.z);
+            }
+            if (typeof setThreeJSScale === 'function') {
+                setThreeJSScale(p.scale);
+            }
+            updateCanvas();
+        });
     });
 }
 
@@ -7642,6 +7704,35 @@ function drawElementFrame(context, el, dims, textWidth, textHeight) {
         context.lineTo(-sw / 2, sh / 2 - padding);
         context.closePath();
         context.stroke();
+    } else if (el.frame === 'pill-button') {
+        // Pill CTA Button like "Try Now!" with solid fill and soft shadow
+        const pw = frameW + padding * 2.5;
+        const ph = frameH + padding * 0.8;
+        const pr = ph / 2;
+        context.save();
+        context.shadowColor = 'rgba(0,0,0,0.18)';
+        context.shadowBlur = 18 * scale;
+        context.shadowOffsetX = 0;
+        context.shadowOffsetY = 6 * scale;
+        context.fillStyle = el.frameColor || '#ffffff';
+        context.beginPath();
+        context.roundRect(-pw / 2, -ph / 2, pw, ph, pr);
+        context.fill();
+        context.restore();
+    } else if (el.frame === 'badge-squircle') {
+        // App icon / Logo squircle badge with soft shadow
+        const side = Math.max(frameW, frameH) + padding * 1.5;
+        const sqR = side * 0.28;
+        context.save();
+        context.shadowColor = 'rgba(0,0,0,0.18)';
+        context.shadowBlur = 18 * scale;
+        context.shadowOffsetX = 0;
+        context.shadowOffsetY = 6 * scale;
+        context.fillStyle = el.frameColor || '#ffffff';
+        context.beginPath();
+        context.roundRect(-side / 2, -side / 2, side, side, sqR);
+        context.fill();
+        context.restore();
     }
 
     context.restore();

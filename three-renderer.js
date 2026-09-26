@@ -53,6 +53,8 @@ const deviceConfigs = {
 // Using var so it's accessible from app.js
 var frameColorPresets = {
     iphone: [
+        { id: 'glass', label: 'Clear Transparent Glass', swatch: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(200,230,255,0.6) 50%, rgba(255,255,255,0.8) 100%)', isGlass: true,
+          materials: { backpanel: '#ffffff', metalframe: '#e8f0fe', gray: '#ffffff' } },
         { id: 'natural', label: 'Natural Titanium', swatch: '#9d927f',
           materials: { backpanel: '#9d927f', metalframe: '#5f5950', gray: '#221f1b' } },
         { id: 'blue', label: 'Blue Titanium', swatch: '#3d4d5c',
@@ -71,6 +73,8 @@ var frameColorPresets = {
           materials: { backpanel: '#c1272d', metalframe: '#8a1c20', gray: '#1a0a0a' } },
     ],
     samsung: [
+        { id: 'glass', label: 'Clear Transparent Glass', swatch: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(200,230,255,0.6) 50%, rgba(255,255,255,0.8) 100%)', isGlass: true,
+          materials: { back_glass: '#ffffff', frame: '#e8f0fe', antenna: '#ffffff' } },
         { id: 'gray', label: 'Titanium Gray', swatch: '#8a8a8a',
           materials: { back_glass: '#4c4c4c', frame: '#cdcdcd', antenna: '#707070' } },
         { id: 'black', label: 'Titanium Black', swatch: '#2a2a2a',
@@ -88,8 +92,58 @@ var frameColorPresets = {
     ]
 };
 
-// Store original material colors for the current model
-let originalMaterialColors = {};
+// Apply material settings to a mesh for glass / standard preset
+function applyPresetToModel(model, preset) {
+    if (!model || !preset) return;
+    const isGlass = !!preset.isGlass;
+
+    model.traverse((child) => {
+        if (child.isMesh && child.material) {
+            const matName = (child.material.name || '').toLowerCase();
+            // Don't modify the screen mesh or front glass overlay
+            if (matName === 'glass' || matName.includes('screen') || matName.includes('display')) {
+                return;
+            }
+
+            if (isGlass) {
+                // Transparent acrylic / glass bumper look
+                if (!child.userData.origMaterial) {
+                    child.userData.origMaterial = child.material;
+                }
+                if (matName === 'backpanel' || matName === 'back_glass') {
+                    child.material.transparent = true;
+                    child.material.opacity = 0.22;
+                    child.material.roughness = 0.15;
+                    child.material.metalness = 0.1;
+                    if (child.material.color) child.material.color.set('#ffffff');
+                } else if (matName === 'metalframe' || matName === 'frame') {
+                    child.material.transparent = true;
+                    child.material.opacity = 0.58;
+                    child.material.roughness = 0.08;
+                    child.material.metalness = 0.2;
+                    if (child.material.color) child.material.color.set('#f0f6ff');
+                } else if (matName === 'gray' || matName === 'antenna') {
+                    child.material.transparent = true;
+                    child.material.opacity = 0.35;
+                    if (child.material.color) child.material.color.set('#ffffff');
+                }
+                child.material.needsUpdate = true;
+            } else {
+                // Restore non-glass settings
+                if (child.material.transparent && (matName === 'backpanel' || matName === 'back_glass' || matName === 'metalframe' || matName === 'frame')) {
+                    child.material.transparent = false;
+                    child.material.opacity = 1.0;
+                    child.material.roughness = 0.4;
+                    child.material.metalness = 0.8;
+                }
+                if (preset.materials && preset.materials[matName]) {
+                    child.material.color.set(preset.materials[matName]);
+                }
+                child.material.needsUpdate = true;
+            }
+        }
+    });
+}
 
 // Apply a frame color preset to the phone model
 function setPhoneFrameColor(presetId, deviceType) {
@@ -102,15 +156,7 @@ function setPhoneFrameColor(presetId, deviceType) {
     const preset = presets.find(p => p.id === presetId);
     if (!preset) return;
 
-    phoneModel.traverse((child) => {
-        if (child.isMesh && child.material) {
-            const matName = (child.material.name || '').toLowerCase();
-            if (preset.materials[matName]) {
-                child.material.color.set(preset.materials[matName]);
-            }
-        }
-    });
-
+    applyPresetToModel(phoneModel, preset);
     requestThreeJSRender();
 }
 
@@ -125,14 +171,7 @@ function setCachedModelFrameColor(presetId, deviceType) {
     const preset = presets.find(p => p.id === presetId);
     if (!preset) return;
 
-    cached.model.traverse((child) => {
-        if (child.isMesh && child.material) {
-            const matName = (child.material.name || '').toLowerCase();
-            if (preset.materials[matName]) {
-                child.material.color.set(preset.materials[matName]);
-            }
-        }
-    });
+    applyPresetToModel(cached.model, preset);
 }
 
 // Initialize Three.js scene
@@ -754,13 +793,11 @@ function renderThreeJSToCanvas(targetCanvas, width, height) {
             const screenshotScale = ss.scale / 100;
             phonePivot.scale.setScalar(screenshotScale);
 
-            // Position: match 2D behavior where available space depends on (1 - scale)
-            // This ensures same percentages look the same in 2D and 3D
-            // X uses smaller factor (1.1) since canvas is taller than wide (400x700 aspect)
-            const availableSpaceY = (1 - screenshotScale) * 2;
-            const availableSpaceX = (1 - screenshotScale) * 0.9;
-            const xOffset = ((ss.x - 50) / 50) * availableSpaceX;
-            const yOffset = -((ss.y - 50) / 50) * availableSpaceY; // Inverted for 3D
+            // Position: allow smooth movement even at 100% scale (consistent with 2D mode)
+            const spaceY = Math.max((1 - screenshotScale) * 2, 0.9);
+            const spaceX = Math.max((1 - screenshotScale) * 0.9, 0.55);
+            const xOffset = ((ss.x - 50) / 50) * spaceX;
+            const yOffset = -((ss.y - 50) / 50) * spaceY; // Inverted for 3D
             phonePivot.position.set(
                 xOffset + basePositionOffset.x,
                 yOffset + basePositionOffset.y,
@@ -906,10 +943,10 @@ function renderThreeJSForScreenshot(targetCanvas, width, height, screenshotIndex
     // Apply scale and position (matching 2D behavior)
     const screenshotScale = ss.scale / 100;
     pivotToUse.scale.setScalar(screenshotScale);
-    const availableSpaceY = (1 - screenshotScale) * 2;
-    const availableSpaceX = (1 - screenshotScale) * 0.9;
-    const xOffset = ((ss.x - 50) / 50) * availableSpaceX;
-    const yOffset = -((ss.y - 50) / 50) * availableSpaceY;
+    const spaceY = Math.max((1 - screenshotScale) * 2, 0.9);
+    const spaceX = Math.max((1 - screenshotScale) * 0.9, 0.55);
+    const xOffset = ((ss.x - 50) / 50) * spaceX;
+    const yOffset = -((ss.y - 50) / 50) * spaceY;
     pivotToUse.position.set(
         xOffset + basePositionOffset.x,
         yOffset + basePositionOffset.y,

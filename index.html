@@ -447,6 +447,12 @@
                                     <!-- Luxury / Premium -->
                                     <div class="preset-swatch" title="Gold Noir" style="background: linear-gradient(135deg, #020b13 0%, #1a1200 50%, #c9a227 100%)" data-gradient="linear-gradient(135deg, #020b13 0%, #1a1200 50%, #c9a227 100%)"></div>
                                     <div class="preset-swatch" title="Velvet Noir" style="background: linear-gradient(150deg, #1a0000 0%, #400128 50%, #6b0f1a 100%)" data-gradient="linear-gradient(150deg, #1a0000 0%, #400128 50%, #6b0f1a 100%)"></div>
+                                    <!-- Pastel Candy / Showcase (Honey, Mint, Coral, Lavender) -->
+                                    <div class="preset-swatch" title="Honey Gold" style="background: linear-gradient(145deg, #f9c774 0%, #f3bc65 100%)" data-gradient="linear-gradient(145deg, #f9c774 0%, #f3bc65 100%)"></div>
+                                    <div class="preset-swatch" title="Mint Breeze" style="background: linear-gradient(145deg, #b0ebe5 0%, #a4e4dc 100%)" data-gradient="linear-gradient(145deg, #b0ebe5 0%, #a4e4dc 100%)"></div>
+                                    <div class="preset-swatch" title="Blush Coral" style="background: linear-gradient(145deg, #fbb8c5 0%, #f9a8b8 100%)" data-gradient="linear-gradient(145deg, #fbb8c5 0%, #f9a8b8 100%)"></div>
+                                    <div class="preset-swatch" title="Soft Lavender" style="background: linear-gradient(145deg, #c7cff7 0%, #b8c0ec 100%)" data-gradient="linear-gradient(145deg, #c7cff7 0%, #b8c0ec 100%)"></div>
+                                    <div class="preset-swatch" title="Cream Vanilla" style="background: linear-gradient(145deg, #fdfbf7 0%, #f5eee6 100%)" data-gradient="linear-gradient(145deg, #fdfbf7 0%, #f5eee6 100%)"></div>
                                     <!-- Calm / Zen -->
                                     <div class="preset-swatch" title="Morning Mist" style="background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%)" data-gradient="linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%)"></div>
                                     <div class="preset-swatch" title="Sage Whisper" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)" data-gradient="linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)"></div>
@@ -597,6 +603,35 @@
                             <span class="range-value" id="rotation-3d-z-value">0°</span>
                         </div>
                     </div>
+                    <div class="control-group">
+                        <label class="control-label">3D Angle Presets</label>
+                        <div class="preset-positions" id="presets-3d-angles">
+                            <button type="button" class="position-preset" data-angle3d="front" title="Front Flat">
+                                <svg viewBox="0 0 40 60" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="10" y="10" width="20" height="40" rx="3"/>
+                                </svg>
+                                <span>Front</span>
+                            </button>
+                            <button type="button" class="position-preset" data-angle3d="showcase-left" title="Showcase Left Tilt">
+                                <svg viewBox="0 0 40 60" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="8,16 26,10 28,50 10,46"/>
+                                </svg>
+                                <span>Showcase L</span>
+                            </button>
+                            <button type="button" class="position-preset" data-angle3d="showcase-right" title="Showcase Right Tilt">
+                                <svg viewBox="0 0 40 60" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="14,10 32,16 30,46 12,50"/>
+                                </svg>
+                                <span>Showcase R</span>
+                            </button>
+                            <button type="button" class="position-preset" data-angle3d="floating" title="Floating Upward">
+                                <svg viewBox="0 0 40 60" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="10,22 30,14 34,44 14,52"/>
+                                </svg>
+                                <span>Floating</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="position-presets-section">
@@ -669,7 +704,7 @@
                 <div class="control-group">
                     <label class="control-label">Screenshot Scale</label>
                     <div class="control-row">
-                        <input type="range" id="screenshot-scale" min="30" max="100" value="70">
+                        <input type="range" id="screenshot-scale" min="30" max="200" value="70">
                         <span class="range-value" id="screenshot-scale-value">70%</span>
                     </div>
                 </div>
@@ -1310,6 +1345,8 @@
                                 <option value="laurel-detailed-star">Laurel Detailed + Star</option>
                                 <option value="badge-circle">Circle Badge</option>
                                 <option value="badge-ribbon">Shield Badge</option>
+                                <option value="pill-button">Pill Button (Try Now!)</option>
+                                <option value="badge-squircle">Squircle Badge (App Icon / Logo)</option>
                             </select>
                         </div>
 
