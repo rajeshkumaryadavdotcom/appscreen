@@ -28,7 +28,6 @@ const llmProviders = {
     },
     google: {
         name: 'Google (Gemini)',
-        keyPrefix: 'AIza',
         storageKey: 'googleApiKey',
         modelStorageKey: 'googleModel',
         models: [
@@ -81,6 +80,7 @@ function getApiKey(provider) {
 function validateApiKeyFormat(provider, key) {
     const config = llmProviders[provider];
     if (!config) return false;
+    if (!config.keyPrefix) return Boolean(key && key.trim());
     return key.startsWith(config.keyPrefix);
 }
 

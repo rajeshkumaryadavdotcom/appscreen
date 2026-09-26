@@ -5864,7 +5864,7 @@ function saveSettings() {
 
         if (key) {
             // Validate key format
-            if (key.startsWith(config.keyPrefix)) {
+            if (!config.keyPrefix || key.startsWith(config.keyPrefix)) {
                 localStorage.setItem(config.storageKey, key);
                 status.textContent = '✓ API key saved';
                 status.className = 'settings-key-status success';
