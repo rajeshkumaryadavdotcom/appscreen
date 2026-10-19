@@ -285,6 +285,19 @@
                                     <span class="device-option-size">1024 × 500</span>
                                 </div>
                                 <div class="output-size-divider"></div>
+                                <div class="device-option" data-device="appstore-header">
+                                    <span class="device-option-name">App Store Header</span>
+                                    <span class="device-option-size">3840 × 1646</span>
+                                </div>
+                                <div class="device-option" data-device="appstore-search">
+                                    <span class="device-option-name">App Store Search Results</span>
+                                    <span class="device-option-size">3840 × 2560</span>
+                                </div>
+                                <div class="device-option" data-device="appstore-universal">
+                                    <span class="device-option-name">App Store Universal</span>
+                                    <span class="device-option-size">5244 × 2950</span>
+                                </div>
+                                <div class="output-size-divider"></div>
                                 <div class="device-option" data-device="custom">
                                     <span class="device-option-name">Custom Size</span>
                                     <span class="device-option-size">Set dimensions</span>
@@ -323,6 +336,9 @@
                 </div>
                 <div class="canvas-wrapper" id="canvas-wrapper">
                     <canvas id="preview-canvas"></canvas>
+                    <div class="safe-area-guide" id="safe-area-guide" hidden>
+                        <span class="safe-area-guide-label" id="safe-area-guide-label">Safe area</span>
+                    </div>
                     <div id="threejs-container" style="display: none;"></div>
                     <div class="no-screenshot" id="no-screenshot">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">

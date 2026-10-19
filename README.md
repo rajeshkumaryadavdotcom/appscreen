@@ -14,6 +14,7 @@ A free, open-source tool for creating beautiful App Store screenshots with custo
 
 ### Output & Export
 - **Multiple Output Sizes**: iPhone 6.9", 6.7", 6.5", 5.5" and iPad 12.9", 11" App Store requirements, plus custom sizes
+- **Apple Creative Assets**: App Store product page header (3840 × 1646), search results (3840 × 2560), and universal asset (5244 × 2950) with safe-area guides shown on the preview (iOS 27+, never included in exports)
 - **Batch Export**: Export all screenshots at once as a ZIP file
 - **Per-Screenshot Settings**: Each screenshot can have its own background, device settings, and text
 

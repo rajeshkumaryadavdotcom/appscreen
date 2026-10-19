@@ -1253,7 +1253,21 @@ const deviceDimensions = {
     'web-og': { width: 1200, height: 630 },
     'web-twitter': { width: 1200, height: 675 },
     'web-hero': { width: 1920, height: 1080 },
-    'web-feature': { width: 1024, height: 500 }
+    'web-feature': { width: 1024, height: 500 },
+    // Apple Creative Assets (App Store Connect, iOS 27+)
+    'appstore-header': { width: 3840, height: 1646 },
+    'appstore-search': { width: 3840, height: 2560 },
+    'appstore-universal': { width: 5244, height: 2950 }
+};
+
+// Safe areas for Apple Creative Assets, per Apple's official templates.
+// 'top' is the distance in px from the canvas top edge to the safe area's top edge.
+// When 'top' is omitted the safe area is vertically centered.
+const creativeAssetSafeAreas = {
+    'appstore-header': { width: 1646, height: 661, label: 'Header safe area' },
+    'appstore-search': { width: 2168, height: 1030, label: 'Search safe area' },
+    // Apple's Universal template keeps the art safe area above the vertical center
+    'appstore-universal': { width: 1402, height: 962, top: 480, label: 'Universal safe area' }
 };
 
 // DOM elements
@@ -6876,6 +6890,28 @@ function getCanvasDimensions() {
     return deviceDimensions[state.outputDevice];
 }
 
+// Position the safe-area guide overlay for Apple Creative Asset sizes.
+// The guide is a DOM overlay on top of the preview canvas, so it never
+// appears in exported images (exports read the canvas pixels directly).
+function updateSafeAreaGuide(dims, scale) {
+    const guide = document.getElementById('safe-area-guide');
+    if (!guide) return;
+
+    const safe = creativeAssetSafeAreas[state.outputDevice];
+    if (!safe) {
+        guide.hidden = true;
+        return;
+    }
+
+    const top = safe.top !== undefined ? safe.top : (dims.height - safe.height) / 2;
+    guide.hidden = false;
+    guide.style.left = (((dims.width - safe.width) / 2) * scale) + 'px';
+    guide.style.top = (top * scale) + 'px';
+    guide.style.width = (safe.width * scale) + 'px';
+    guide.style.height = (safe.height * scale) + 'px';
+    document.getElementById('safe-area-guide-label').textContent = safe.label;
+}
+
 function updateCanvas() {
     saveState(); // Persist state on every update
     const dims = getCanvasDimensions();
@@ -6888,6 +6924,9 @@ function updateCanvas() {
     const scale = Math.min(maxPreviewWidth / dims.width, maxPreviewHeight / dims.height);
     canvas.style.width = (dims.width * scale) + 'px';
     canvas.style.height = (dims.height * scale) + 'px';
+
+    // Show Apple Creative Assets safe-area guide (preview only, never exported)
+    updateSafeAreaGuide(dims, scale);
 
     // Draw background
     drawBackground();
