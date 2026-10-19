@@ -15,6 +15,8 @@ A free, open-source tool for creating beautiful App Store screenshots with custo
 ### Output & Export
 - **Multiple Output Sizes**: iPhone 6.9", 6.7", 6.5", 5.5" and iPad 12.9", 11" App Store requirements, plus custom sizes
 - **Apple Creative Assets**: App Store product page header (3840 × 1646), search results (3840 × 2560), and universal asset (5244 × 2950) with safe-area guides shown on the preview (iOS 27+, never included in exports)
+- **Dark Mode Variants**: one-click "Light + Dark" ZIP export with automatically darkened backgrounds (for App Store Dark Mode product pages)
+- **Smart Export Naming**: App Store Connect-style file names (`<device>-<language>-<number>.png`) and per-language folders
 - **Batch Export**: Export all screenshots at once as a ZIP file
 - **Per-Screenshot Settings**: Each screenshot can have its own background, device settings, and text
 
@@ -55,6 +57,8 @@ A free, open-source tool for creating beautiful App Store screenshots with custo
 
 ### User Interface
 - **Dark Theme**: Easy on the eyes for extended editing sessions
+- **Undo/Redo**: Ctrl+Z / Ctrl+Shift+Z (or the toolbar buttons) with snapshot-based history
+- **Safe-Area Guides**: toggleable guides for Apple Creative Assets safe areas and iPhone/iPad status bar & home indicator zones (preview only, never exported)
 - **Side Preview Carousel**: See adjacent screenshots while editing
 - **Drag & Drop**: Reorder screenshots by dragging
 - **Collapsible Sections**: Clean UI with expandable settings panels

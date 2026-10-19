@@ -1260,15 +1260,26 @@ const deviceDimensions = {
     'appstore-universal': { width: 5244, height: 2950 }
 };
 
-// Safe areas for Apple Creative Assets, per Apple's official templates.
-// 'top' is the distance in px from the canvas top edge to the safe area's top edge.
-// When 'top' is omitted the safe area is vertically centered.
-const creativeAssetSafeAreas = {
-    'appstore-header': { width: 1646, height: 661, label: 'Header safe area' },
-    'appstore-search': { width: 2168, height: 1030, label: 'Search safe area' },
+// Safe-area guides shown on the preview canvas (never exported).
+// type 'box': a centered safe-area box (Apple Creative Assets, per Apple's official templates).
+//   'top' is the distance in px from the canvas top edge; omitted = vertically centered.
+// type 'bands': translucent status-bar (top) and home-indicator (bottom) system-UI zones,
+//   with heights in px, for device screenshot sizes.
+const safeAreaGuides = {
+    'appstore-header': { type: 'box', width: 1646, height: 661, label: 'Header safe area' },
+    'appstore-search': { type: 'box', width: 2168, height: 1030, label: 'Search safe area' },
     // Apple's Universal template keeps the art safe area above the vertical center
-    'appstore-universal': { width: 1402, height: 962, top: 480, label: 'Universal safe area' }
+    'appstore-universal': { type: 'box', width: 1402, height: 962, top: 480, label: 'Universal safe area' },
+    'iphone-6.9': { type: 'bands', top: 190, bottom: 105 },
+    'iphone-6.7': { type: 'bands', top: 186, bottom: 102 },
+    'iphone-6.5': { type: 'bands', top: 186, bottom: 102 },
+    'iphone-5.5': { type: 'bands', top: 60, bottom: 150 },
+    'ipad-12.9': { type: 'bands', top: 48, bottom: 68 },
+    'ipad-11': { type: 'bands', top: 48, bottom: 68 }
 };
+
+// Guide visibility is a UI preference, not project data
+let showGuides = localStorage.getItem('showGuides') !== 'false';
 
 // DOM elements
 const canvas = document.getElementById('preview-canvas');
@@ -1482,11 +1493,13 @@ async function init() {
         await loadState();
         syncUIWithState();
         updateCanvas();
+        resetHistory();
     } catch (e) {
         console.error('Initialization error:', e);
         // Continue with defaults
         syncUIWithState();
         updateCanvas();
+        resetHistory();
     }
 }
 
@@ -1503,10 +1516,8 @@ function initSync() {
     init();
 }
 
-// Save state to IndexedDB for current project
-function saveState() {
-    if (!db) return;
-
+// Serialize the current project (without heavy Image objects) for persistence and history
+function buildProjectSnapshot() {
     // Convert screenshots to base64 for storage, including per-screenshot settings and localized images
     const screenshotsToSave = state.screenshots.map(s => {
         // Save localized images (without Image objects, just src/name)
@@ -1540,9 +1551,7 @@ function saveState() {
         };
     });
 
-    const stateToSave = {
-        id: currentProjectId,
-        formatVersion: 2, // Version 2: new 3D positioning formula
+    return {
         screenshots: screenshotsToSave,
         selectedIndex: state.selectedIndex,
         outputDevice: state.outputDevice,
@@ -1551,6 +1560,17 @@ function saveState() {
         currentLanguage: state.currentLanguage,
         projectLanguages: state.projectLanguages,
         defaults: state.defaults
+    };
+}
+
+// Save state to IndexedDB for current project
+function saveState() {
+    if (!db) return;
+
+    const stateToSave = {
+        id: currentProjectId,
+        formatVersion: 2, // Version 2: new 3D positioning formula
+        ...buildProjectSnapshot()
     };
 
     // Update screenshot count in project metadata
@@ -1566,6 +1586,157 @@ function saveState() {
         store.put(stateToSave);
     } catch (e) {
         console.error('Error saving state:', e);
+    }
+}
+
+// ---- Undo / Redo (snapshot-based) ----
+// Snapshots are debounced serializations of the project. Heavy image dataURL
+// strings are detached into a shared array (strings are immutable, so this
+// keeps memory flat) while the snapshot body stays a small immutable copy.
+// Selection-only changes are excluded so moving between screenshots is not
+// an undo step.
+const history = { past: [], future: [], limit: 30 };
+let historyCurrent = null;    // Snapshot object of the current state
+let historyTimer = null;
+let historySuspended = false; // Suppress commits during exports/restore
+
+const HISTORY_SRC_PLACEHOLDER = '@@src';
+
+function buildHistorySnapshot() {
+    const snap = buildProjectSnapshot();
+    const srcs = [];
+    snap.screenshots.forEach(s => {
+        Object.values(s.localizedImages || {}).forEach(ld => {
+            srcs.push(ld.src || '');
+            ld.src = HISTORY_SRC_PLACEHOLDER + (srcs.length - 1);
+        });
+        if (s.src) {
+            srcs.push(s.src);
+            s.src = HISTORY_SRC_PLACEHOLDER + (srcs.length - 1);
+        }
+    });
+    // Deep-copy with placeholders: snapshot is immutable and tiny,
+    // the heavy dataURL strings stay shared in the srcs array
+    return { body: JSON.parse(JSON.stringify(snap)), srcs };
+}
+
+function scheduleHistoryCommit() {
+    if (historySuspended) return;
+    clearTimeout(historyTimer);
+    historyTimer = setTimeout(commitHistorySnapshot, 700);
+}
+
+function commitHistorySnapshot() {
+    clearTimeout(historyTimer);
+    if (historySuspended) return;
+    const snap = buildHistorySnapshot();
+    if (JSON.stringify(snap.body) === JSON.stringify(historyCurrent?.body)) return;
+    if (historyCurrent) {
+        history.past.push(historyCurrent);
+        if (history.past.length > history.limit) history.past.shift();
+    }
+    historyCurrent = snap;
+    history.future = [];
+    updateUndoRedoButtons();
+}
+
+function resetHistory() {
+    clearTimeout(historyTimer);
+    history.past = [];
+    history.future = [];
+    historyCurrent = buildHistorySnapshot();
+    updateUndoRedoButtons();
+}
+
+function updateUndoRedoButtons() {
+    const undoBtn = document.getElementById('undo-btn');
+    const redoBtn = document.getElementById('redo-btn');
+    if (undoBtn) undoBtn.disabled = history.past.length === 0;
+    if (redoBtn) redoBtn.disabled = history.future.length === 0;
+}
+
+async function undo() {
+    commitHistorySnapshot(); // Flush any pending change first
+    if (history.past.length === 0) return;
+    history.future.push(historyCurrent);
+    historyCurrent = history.past.pop();
+    await applyHistorySnapshot(historyCurrent);
+}
+
+async function redo() {
+    if (history.future.length === 0) return;
+    history.past.push(historyCurrent);
+    historyCurrent = history.future.pop();
+    await applyHistorySnapshot(historyCurrent);
+}
+
+async function applyHistorySnapshot(snap) {
+    historySuspended = true;
+    try {
+        const data = JSON.parse(JSON.stringify(snap.body));
+        // Re-attach the heavy dataURL strings
+        data.screenshots.forEach(s => {
+            Object.values(s.localizedImages || {}).forEach(ld => {
+                const m = new RegExp('^' + HISTORY_SRC_PLACEHOLDER + '(\\d+)$').exec(ld.src);
+                ld.src = m ? snap.srcs[+m[1]] : '';
+            });
+            const m = new RegExp('^' + HISTORY_SRC_PLACEHOLDER + '(\\d+)$').exec(s.src);
+            if (m) s.src = snap.srcs[+m[1]];
+        });
+        await restoreProjectSnapshot(data);
+        updateScreenshotList();
+        syncUIWithState();
+        updateCanvas();
+    } finally {
+        historySuspended = false;
+        updateUndoRedoButtons();
+    }
+}
+
+// Rebuild runtime state (including Image objects) from a serialized snapshot
+async function restoreProjectSnapshot(snap) {
+    state.outputDevice = snap.outputDevice || 'iphone-6.5';
+    state.customWidth = snap.customWidth || 1290;
+    state.customHeight = snap.customHeight || 2796;
+    state.currentLanguage = snap.currentLanguage || 'en';
+    state.projectLanguages = snap.projectLanguages || ['en'];
+    if (snap.defaults) state.defaults = snap.defaults;
+
+    const restored = await Promise.all((snap.screenshots || []).map(async (s) => {
+        const localizedImages = {};
+        await Promise.all(Object.keys(s.localizedImages || {}).map(lang => new Promise(resolve => {
+            const data = s.localizedImages[lang];
+            if (!data?.src) { resolve(); return; }
+            const img = new Image();
+            img.onload = () => {
+                localizedImages[lang] = { image: img, src: data.src, name: data.name };
+                resolve();
+            };
+            img.onerror = () => {
+                localizedImages[lang] = { image: null, src: data.src, name: data.name };
+                resolve();
+            };
+            img.src = data.src;
+        })));
+
+        const firstLang = Object.keys(localizedImages)[0];
+        return {
+            image: localizedImages[firstLang]?.image || null,
+            name: s.name,
+            deviceType: s.deviceType,
+            localizedImages: localizedImages,
+            background: s.background || JSON.parse(JSON.stringify(state.defaults.background)),
+            screenshot: s.screenshot || JSON.parse(JSON.stringify(state.defaults.screenshot)),
+            text: s.text || JSON.parse(JSON.stringify(state.defaults.text)),
+            elements: reconstructElementImages(s.elements),
+            popouts: s.popouts || [],
+            overrides: s.overrides || {}
+        };
+    }));
+
+    state.screenshots = restored;
+    if (state.selectedIndex > restored.length - 1) {
+        state.selectedIndex = Math.max(0, restored.length - 1);
     }
 }
 
@@ -1980,6 +2151,7 @@ async function switchProject(projectId) {
     updateGradientStopsUI();
     updateProjectSelector();
     updateCanvas();
+    resetHistory(); // Fresh undo history per project
 }
 
 // Create a new project
@@ -4147,6 +4319,37 @@ function setupEventListeners() {
         });
     });
 
+    // Safe-area guides toggle
+    const guidesBtn = document.getElementById('guides-btn');
+    if (guidesBtn) {
+        guidesBtn.classList.toggle('active', showGuides);
+        guidesBtn.addEventListener('click', () => {
+            showGuides = !showGuides;
+            localStorage.setItem('showGuides', String(showGuides));
+            guidesBtn.classList.toggle('active', showGuides);
+            updateCanvas();
+        });
+    }
+
+    // Undo / Redo buttons
+    document.getElementById('undo-btn')?.addEventListener('click', () => undo());
+    document.getElementById('redo-btn')?.addEventListener('click', () => redo());
+
+    // Undo / Redo keyboard shortcuts (skip when typing in a field)
+    document.addEventListener('keydown', (e) => {
+        const isMod = e.ctrlKey || e.metaKey;
+        if (!isMod) return;
+        const tag = (e.target.tagName || '').toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable) return;
+        if (e.key === 'z' && !e.shiftKey) {
+            e.preventDefault();
+            undo();
+        } else if ((e.key === 'z' && e.shiftKey) || e.key === 'y') {
+            e.preventDefault();
+            redo();
+        }
+    });
+
     // Custom size inputs
     document.getElementById('custom-width').addEventListener('input', (e) => {
         state.customWidth = parseInt(e.target.value) || 1290;
@@ -4652,6 +4855,7 @@ function setupEventListeners() {
     // Export buttons
     document.getElementById('export-current').addEventListener('click', exportCurrent);
     document.getElementById('export-all').addEventListener('click', exportAll);
+    document.getElementById('export-dark-btn').addEventListener('click', exportAllLightDark);
 
     // Position presets
     document.querySelectorAll('.position-preset').forEach(btn => {
@@ -6319,8 +6523,10 @@ function updateScreenshotList() {
     if (rightSidebar) rightSidebar.classList.toggle('disabled', isEmpty);
     const exportCurrent = document.getElementById('export-current');
     const exportAll = document.getElementById('export-all');
+    const exportDark = document.getElementById('export-dark-btn');
     if (exportCurrent) { exportCurrent.disabled = isEmpty; exportCurrent.style.opacity = isEmpty ? '0.4' : ''; exportCurrent.style.pointerEvents = isEmpty ? 'none' : ''; }
     if (exportAll) { exportAll.disabled = isEmpty; exportAll.style.opacity = isEmpty ? '0.4' : ''; exportAll.style.pointerEvents = isEmpty ? 'none' : ''; }
+    if (exportDark) { exportDark.disabled = isEmpty; exportDark.style.opacity = isEmpty ? '0.4' : ''; exportDark.style.pointerEvents = isEmpty ? 'none' : ''; }
 
     // Show transfer mode hint if active
     if (state.transferTarget !== null && state.screenshots.length > 1) {
@@ -6890,26 +7096,57 @@ function getCanvasDimensions() {
     return deviceDimensions[state.outputDevice];
 }
 
-// Position the safe-area guide overlay for Apple Creative Asset sizes.
+// Update the safe-area guide overlay for the current output size.
 // The guide is a DOM overlay on top of the preview canvas, so it never
 // appears in exported images (exports read the canvas pixels directly).
 function updateSafeAreaGuide(dims, scale) {
     const guide = document.getElementById('safe-area-guide');
     if (!guide) return;
 
-    const safe = creativeAssetSafeAreas[state.outputDevice];
-    if (!safe) {
+    const def = safeAreaGuides[state.outputDevice];
+    if (!showGuides || !def) {
         guide.hidden = true;
         return;
     }
-
-    const top = safe.top !== undefined ? safe.top : (dims.height - safe.height) / 2;
     guide.hidden = false;
-    guide.style.left = (((dims.width - safe.width) / 2) * scale) + 'px';
-    guide.style.top = (top * scale) + 'px';
-    guide.style.width = (safe.width * scale) + 'px';
-    guide.style.height = (safe.height * scale) + 'px';
-    document.getElementById('safe-area-guide-label').textContent = safe.label;
+    guide.innerHTML = '';
+
+    const addLabel = (parent, text) => {
+        const tag = document.createElement('span');
+        tag.className = 'safe-area-guide-label';
+        tag.textContent = text;
+        parent.appendChild(tag);
+    };
+
+    if (def.type === 'bands') {
+        // System-UI zones (status bar / home indicator) for device screenshot sizes
+        if (def.top) {
+            const band = document.createElement('div');
+            band.className = 'safe-area-guide-band top';
+            band.style.height = (def.top * scale) + 'px';
+            addLabel(band, 'Status bar');
+            guide.appendChild(band);
+        }
+        if (def.bottom) {
+            const band = document.createElement('div');
+            band.className = 'safe-area-guide-band bottom';
+            band.style.height = (def.bottom * scale) + 'px';
+            addLabel(band, 'Home indicator');
+            guide.appendChild(band);
+        }
+        return;
+    }
+
+    // type 'box' — centered safe-area box
+    const top = def.top !== undefined ? def.top : (dims.height - def.height) / 2;
+    const box = document.createElement('div');
+    box.className = 'safe-area-guide-box';
+    box.style.left = (((dims.width - def.width) / 2) * scale) + 'px';
+    box.style.top = (top * scale) + 'px';
+    box.style.width = (def.width * scale) + 'px';
+    box.style.height = (def.height * scale) + 'px';
+    addLabel(box, def.label);
+    guide.appendChild(box);
 }
 
 function updateCanvas() {
@@ -6971,6 +7208,9 @@ function updateCanvas() {
 
     // Update side previews
     updateSidePreviews();
+
+    // Record an undo checkpoint (debounced) for any state change
+    scheduleHistoryCommit();
 }
 
 function updateSidePreviews() {
@@ -8225,6 +8465,17 @@ function hexToRgba(hex, alpha) {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+// App Store Connect-style export file naming: <device>-<lang>[-<n>].png
+function getExportDeviceSlug() {
+    if (state.outputDevice === 'custom') return `custom-${state.customWidth}x${state.customHeight}`;
+    return state.outputDevice;
+}
+
+function getExportFileName(index, suffix = '') {
+    const num = state.screenshots.length > 1 ? `-${index + 1}` : '';
+    return `${getExportDeviceSlug()}-${state.currentLanguage}${num}${suffix}.png`;
+}
+
 async function exportCurrent() {
     if (state.screenshots.length === 0) {
         await showAppAlert('Please upload a screenshot first', 'info');
@@ -8235,7 +8486,7 @@ async function exportCurrent() {
     updateCanvas();
 
     const link = document.createElement('a');
-    link.download = `screenshot-${state.selectedIndex + 1}.png`;
+    link.download = getExportFileName(state.selectedIndex);
     link.href = canvas.toDataURL('image/png');
     link.click();
 }
@@ -8289,6 +8540,7 @@ async function exportAllForLanguage(lang) {
     const originalLang = state.currentLanguage;
     const zip = new JSZip();
     const total = state.screenshots.length;
+    historySuspended = true; // Don't record undo steps during export
 
     // Show progress
     const langName = languageNames[lang] || lang.toUpperCase();
@@ -8321,7 +8573,7 @@ async function exportAllForLanguage(lang) {
         const dataUrl = canvas.toDataURL('image/png');
         const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
 
-        zip.file(`screenshot-${i + 1}.png`, base64Data, { base64: true });
+        zip.file(getExportFileName(i), base64Data, { base64: true });
     }
 
     // Restore original settings
@@ -8332,6 +8584,7 @@ async function exportAllForLanguage(lang) {
         s.text.currentSubheadlineLang = originalTextLangs[i].subheadline;
     });
     updateCanvas();
+    historySuspended = false;
 
     // Generate ZIP
     showExportProgress('Generating ZIP...', '', 95);
@@ -8342,7 +8595,7 @@ async function exportAllForLanguage(lang) {
     hideExportProgress();
 
     const link = document.createElement('a');
-    link.download = `screenshots_${state.outputDevice}_${lang}.zip`;
+    link.download = `appscreen_${getExportDeviceSlug()}_${lang}.zip`;
     link.href = URL.createObjectURL(content);
     link.click();
     URL.revokeObjectURL(link.href);
@@ -8358,6 +8611,7 @@ async function exportAllLanguages() {
     const totalScreenshots = state.screenshots.length;
     const totalItems = totalLangs * totalScreenshots;
     let completedItems = 0;
+    historySuspended = true; // Don't record undo steps during export
 
     // Show progress
     showExportProgress('Exporting...', 'Preparing all languages', 0);
@@ -8394,7 +8648,7 @@ async function exportAllLanguages() {
             const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
 
             // Use language code as folder name
-            zip.file(`${lang}/screenshot-${i + 1}.png`, base64Data, { base64: true });
+            zip.file(`${lang}/${getExportFileName(i)}`, base64Data, { base64: true });
         }
     }
 
@@ -8406,6 +8660,7 @@ async function exportAllLanguages() {
         s.text.currentSubheadlineLang = originalTextLangs[i].subheadline;
     });
     updateCanvas();
+    historySuspended = false;
 
     // Generate ZIP
     showExportProgress('Generating ZIP...', '', 95);
@@ -8416,7 +8671,113 @@ async function exportAllLanguages() {
     hideExportProgress();
 
     const link = document.createElement('a');
-    link.download = `screenshots_${state.outputDevice}_all-languages.zip`;
+    link.download = `appscreen_${getExportDeviceSlug()}_all-languages.zip`;
+    link.href = URL.createObjectURL(content);
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
+// ===== Dark Mode variant export =====
+// Apple's product page renders in Dark Mode too, so many apps ship a dark
+// variant of every screenshot. These helpers create one automatically.
+
+function darkenHex(hex, factor) {
+    if (typeof hex !== 'string' || !hex.startsWith('#')) return hex;
+    let h = hex.slice(1);
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    if (h.length !== 6) return hex;
+    const r = Math.round(parseInt(h.slice(0, 2), 16) * factor);
+    const g = Math.round(parseInt(h.slice(2, 4), 16) * factor);
+    const b = Math.round(parseInt(h.slice(4, 6), 16) * factor);
+    return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+function darkenBackground(bg) {
+    const d = JSON.parse(JSON.stringify(bg));
+    if (d.type === 'gradient' && d.gradient?.stops) {
+        d.gradient.stops.forEach(stop => { stop.color = darkenHex(stop.color, 0.45); });
+    } else if (d.type === 'solid') {
+        d.solid = darkenHex(d.solid, 0.45);
+    } else if (d.type === 'image') {
+        d.overlayColor = '#000000';
+        d.overlayOpacity = Math.max(d.overlayOpacity || 0, 45);
+    }
+    return d;
+}
+
+// Export every screenshot twice: the current (light) design and an
+// automatic dark variant, grouped per language in a ZIP.
+async function exportAllLightDark() {
+    if (state.screenshots.length === 0) {
+        await showAppAlert('Please upload screenshots first', 'info');
+        return;
+    }
+
+    updateCanvas(); // Ensure fresh render
+    historySuspended = true; // Don't record undo steps during export
+
+    const originalIndex = state.selectedIndex;
+    const originalLang = state.currentLanguage;
+    const zip = new JSZip();
+    const total = state.screenshots.length;
+    const lang = state.currentLanguage;
+
+    // Use current language for text and images
+    const originalTextLangs = state.screenshots.map(s => ({
+        headline: s.text.currentHeadlineLang,
+        subheadline: s.text.currentSubheadlineLang
+    }));
+    state.screenshots.forEach(s => {
+        s.text.currentHeadlineLang = lang;
+        s.text.currentSubheadlineLang = lang;
+    });
+
+    showExportProgress('Exporting...', 'Preparing light + dark variants', 0);
+
+    try {
+        for (let i = 0; i < total; i++) {
+            state.selectedIndex = i;
+            const shot = state.screenshots[i];
+            const originalBg = shot.background;
+
+            // Light (current) variant
+            updateCanvas();
+            zip.file(`${lang}/${getExportFileName(i, '-light')}`,
+                canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, ''), { base64: true });
+
+            // Dark variant
+            shot.background = darkenBackground(originalBg);
+            updateCanvas();
+            zip.file(`${lang}/${getExportFileName(i, '-dark')}`,
+                canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, ''), { base64: true });
+
+            shot.background = originalBg;
+
+            const percent = Math.round(((i + 1) / total) * 90); // Reserve 10% for ZIP generation
+            showExportProgress('Exporting...', `Screenshot ${i + 1} of ${total} (light + dark)`, percent);
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+    } finally {
+        // Restore original settings
+        state.screenshots.forEach((s, i) => {
+            s.text.currentHeadlineLang = originalTextLangs[i].headline;
+            s.text.currentSubheadlineLang = originalTextLangs[i].subheadline;
+        });
+        state.selectedIndex = originalIndex;
+        updateCanvas();
+        historySuspended = false;
+    }
+
+    // Generate ZIP
+    showExportProgress('Generating ZIP...', '', 95);
+    const content = await zip.generateAsync({ type: 'blob' });
+
+    showExportProgress('Complete!', '', 100);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    hideExportProgress();
+
+    const link = document.createElement('a');
+    link.download = `appscreen_${getExportDeviceSlug()}_${lang}_light-dark.zip`;
     link.href = URL.createObjectURL(content);
     link.click();
     URL.revokeObjectURL(link.href);

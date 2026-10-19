@@ -955,19 +955,91 @@ input[type="range"]::-webkit-slider-thumb {
     display: block;
 }
 
-/* Apple Creative Assets safe-area guide (preview overlay only, never exported) */
+/* Canvas toolbar (undo/redo, guides) */
+.canvas-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 14px;
+}
+
+.canvas-tool-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.canvas-tool-btn:hover:not(:disabled) {
+    background: var(--border-color);
+    color: var(--text-primary);
+}
+
+.canvas-tool-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+.canvas-tool-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.canvas-tool-divider {
+    width: 1px;
+    height: 18px;
+    background: var(--border-color);
+    margin: 0 2px;
+}
+
+/* Safe-area guide overlay (preview only, never exported) */
 .safe-area-guide {
     position: absolute;
-    border: 1px dashed rgba(255, 255, 255, 0.55);
-    border-radius: 4px;
-    /* Dim everything outside the safe area (clipped to the wrapper) */
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.2);
+    inset: 0;
     pointer-events: none;
     z-index: 2;
 }
 
 .safe-area-guide[hidden] {
     display: none;
+}
+
+/* Centered safe-area box (Apple Creative Assets) */
+.safe-area-guide-box {
+    position: absolute;
+    border: 1px dashed rgba(255, 255, 255, 0.55);
+    border-radius: 4px;
+    /* Dim everything outside the safe area (clipped to the wrapper) */
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.2);
+}
+
+/* System-UI zones (status bar / home indicator) for device screenshot sizes */
+.safe-area-guide-band {
+    position: absolute;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.safe-area-guide-band.top {
+    top: 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.35);
+}
+
+.safe-area-guide-band.bottom {
+    bottom: 0;
+    border-top: 1px dashed rgba(255, 255, 255, 0.35);
 }
 
 .safe-area-guide-label {
@@ -981,6 +1053,17 @@ input[type="range"]::-webkit-slider-thumb {
     color: rgba(255, 255, 255, 0.9);
     background: rgba(0, 0, 0, 0.6);
     border-radius: 3px;
+}
+
+.safe-area-guide-band .safe-area-guide-label {
+    top: auto;
+    bottom: 2px;
+    left: 4px;
+}
+
+/* Light + Dark export button */
+#export-dark-btn {
+    margin-top: 6px;
 }
 
 #preview-canvas-left,

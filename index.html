@@ -321,6 +321,12 @@
                         </svg>
                         Export All
                     </button>
+                    <button class="export-btn export-all-btn secondary" id="export-dark-btn" title="Export all screenshots in light and dark variants as ZIP (for Dark Mode product pages)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                        </svg>
+                        Light + Dark
+                    </button>
                 </div>
             </div>
         </div>
@@ -336,9 +342,7 @@
                 </div>
                 <div class="canvas-wrapper" id="canvas-wrapper">
                     <canvas id="preview-canvas"></canvas>
-                    <div class="safe-area-guide" id="safe-area-guide" hidden>
-                        <span class="safe-area-guide-label" id="safe-area-guide-label">Safe area</span>
-                    </div>
+                    <div class="safe-area-guide" id="safe-area-guide" hidden></div>
                     <div id="threejs-container" style="display: none;"></div>
                     <div class="no-screenshot" id="no-screenshot">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
@@ -355,6 +359,27 @@
                 <div class="side-preview side-preview-far-right" id="side-preview-far-right">
                     <canvas id="preview-canvas-far-right"></canvas>
                 </div>
+            </div>
+            <div class="canvas-toolbar">
+                <button class="canvas-tool-btn" id="undo-btn" title="Undo (Ctrl+Z)" disabled>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 7v6h6"/>
+                        <path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/>
+                    </svg>
+                </button>
+                <button class="canvas-tool-btn" id="redo-btn" title="Redo (Ctrl+Shift+Z)" disabled>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 7v6h-6"/>
+                        <path d="M3 17a9 9 0 019-9 9 9 0 016 2.3L21 13"/>
+                    </svg>
+                </button>
+                <div class="canvas-tool-divider"></div>
+                <button class="canvas-tool-btn active" id="guides-btn" title="Toggle safe-area guides">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="4 3"/>
+                        <path d="M9 3v18M15 3v18M3 9h18M3 15h18" stroke-dasharray="2 3" stroke-width="1"/>
+                    </svg>
+                </button>
             </div>
         </div>
 

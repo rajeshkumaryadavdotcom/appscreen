@@ -50,6 +50,8 @@ Open `http://localhost:8000` in browser. Opening `index.html` directly from file
 - `syncUIWithState()` updates all UI controls to reflect current state
 - Project management uses IndexedDB with two stores: `projects` (data) and `meta` (project list)
 - Per-screenshot settings: each screenshot stores its own background, device, and text settings
+- Undo/redo is snapshot-based: `updateCanvas()` schedules a debounced history commit (`scheduleHistoryCommit()`), snapshots come from `buildProjectSnapshot()` (also used by `saveState()`), and exports suspend history via the `historySuspended` flag
+- `updateSafeAreaGuide()` renders DOM-overlay guides (safe areas / system-UI zones) on the preview canvas - overlays are never included in exports, which read canvas pixels directly
 
 **Canvas rendering pipeline (in updateCanvas):**
 1. `drawBackground()` - gradient/solid/image with optional blur and overlay
